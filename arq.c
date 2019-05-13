@@ -47,8 +47,8 @@ cabecalho *makeHeader() {
     return(header);
 }
 
-//imprime o cabecalho no arquivo
-void printHeader(cabecalho *c, FILE *file) {
+//escreve o cabecalho no arquivo
+void writeHeader(cabecalho *c, FILE *file) {
     fwrite(&c->status, sizeof(c->status), 1, file);
     fwrite(&c->topoLista, sizeof(c->topoLista), 1, file);
     for(int i = 0; i < 5; i++) {
@@ -133,7 +133,27 @@ int EndsWith(char *name, char *tipo) {
     return strncmp(name + tamName - tamTipo, tipo, tamTipo);
 }
 
-//funcao principal 1, cria um binario a partir de um csv valido //erro na Josefa
+//abre arquivo, verifica consistencia e formato
+FILE *openFile(char *name, char *type) {
+    FILE *fileIn = fopen(name, "rb+"); //abre o arquivo para leitura e escrita
+    char aux = '0';
+    if(fileIn == NULL || EndsWith(name, type) != 0) {//verifica se abriu e se tem o formato certo
+        return NULL;
+    }
+    if(strcmp(type, ".bin") == 0) {             //se for binario
+        cabecalho *c = makeHeader();       //aloca um cabecalho
+        readBinHeader(fileIn, c);          //preenche com dados do arquivo
+        if(c == NULL||c->status == '0') {  //verifica a consistencia
+            return NULL;
+        }
+        fseek(fileIn, 0, SEEK_SET);
+        fwrite(&aux,1,1,fileIn);           //marca como inconsistente até terminar a funcao
+    }
+    return (fileIn);
+}
+
+
+//funcao principal 1, cria um binario a partir de um csv valido
 void makeBin(char *name) {
     int aux = 0;
     long int Atual = 0, Espaco;
@@ -147,7 +167,7 @@ void makeBin(char *name) {
     for(int i = 0; i < 5; i++) {
         fscanf(fileIn,"%40[^,\n\r]%*c", header->campos[i]);//le ate 40 char, colocando em campos[i] e ignorando , \n e \r e depois ignorando esse simbolo com %*c
     }
-    printHeader(header, fileOut);
+    writeHeader(header, fileOut);
     fillAt((PageSize) - 214, fileOut);
     dados *anterior = makeRegister();
     dados *data;
@@ -319,12 +339,12 @@ void readBin(char *name) {
 
 void insertList(long int posAtual, int tamAtual, FILE *fileIn) {
     fseek(fileIn, 1, SEEK_SET);                          //vai para o inicio da lista
-    long int proxLista = -1, antLista = -1;
+    long int proxLista = -1, antLista = 1;
     int tamProx = 0;
     char aux;
     fread(&proxLista, sizeof(long int), 1, fileIn);     //le a proxima posicao
     if(proxLista == -1) {                               //se for zero
-        fseek(fileIn, -(sizeof(long int)), SEEK_SET);   //insere a posicao do registro no topo da lista
+        fseek(fileIn, 1, SEEK_SET);   //insere a posicao do registro no topo da lista
         fwrite(&posAtual, sizeof(long int), 1, fileIn);
         return;
     }
@@ -340,10 +360,10 @@ void insertList(long int posAtual, int tamAtual, FILE *fileIn) {
                 return;
             }
             if(tamProx >= tamAtual) break;                  //se o proximo for maior, para
-            antLista = proxLista;                           //caso contrario guarda a posicao e vai para o proximo
-            fread(&proxLista, sizeof(long int), 1, fileIn);
+            antLista = proxLista + 5;                       //caso contrario guarda a posicao onde esta o encadeamento da lista
+            fread(&proxLista, sizeof(long int), 1, fileIn); //e vai para o proximo
         }while(proxLista != -1);
-        fseek(fileIn, antLista + 5, SEEK_SET);              //insere na lista
+        fseek(fileIn, antLista, SEEK_SET);              //insere na lista
         fwrite(&posAtual, sizeof(long int), 1, fileIn);
         fseek(fileIn, posAtual + 5, SEEK_SET);
         fwrite(&proxLista, sizeof(long int), 1, fileIn);
@@ -394,6 +414,7 @@ char tagCampo(char *c) {
     if(strcmp(c,"telefoneServidor") == 0) tag ='t';
     if(strcmp(c,"nomeServidor") == 0) tag ='n';
     if(strcmp(c,"cargoServidor") == 0) tag ='c';
+    else tag = '0';
     return(tag);
 }
 
@@ -403,7 +424,7 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
     FILE *fileIn = fopen(name, "rb+");
     int id, numReg = 0, numCampo = -1;
     double salario;
-    char tag = tagCampo(campo);
+    char tag = tagCampo(campo), aux = '0';
     if(fileIn == NULL) {
         printf("Falha no processamento do arquivo.");
         return;
@@ -425,6 +446,9 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
         printf("Falha no processamento do arquivo.");
         return;
     }
+    fseek(fileIn, 0, SEEK_SET);
+    fwrite(&aux,1,1,fileIn);
+    aux = '1';
     dados *d = makeRegister();
     fseek(fileIn, PageSize, SEEK_SET);
     while(fgetc(fileIn) != EOF) {
@@ -506,10 +530,90 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
         if(numReg == 0) printf("Registro inexistente.");
         else printf("Número de páginas de disco acessadas: %ld", (ftell(fileIn)/PageSize) + 1);
     }
-    if(menu == 4) {
-        binarioNaTela1(fileIn);
-    }
+    fseek(fileIn, 0, SEEK_SET);
+    fwrite(&aux,1,1,fileIn);
     return;
 }
 
 //**************************************************************************************//
+
+void writeRegister(dados *d) {
+    char *aux = (char*) malloc(sizeof(char)*100);
+    scanf("%s%*c", &aux);
+    if(strcmp(aux,"NULO") == 0) {
+        d->idServidor = -1;
+    } else d->idServidor = atoi(aux);
+    scanf("%s%*c", &aux);
+    if(strcmp(aux,"NULO") == 0) {
+        d->salarioServidor = -1;
+    } else d->salarioServidor = sscanf(aux, "%lf", &d->salarioServidor);
+    scanf("%s%*c", &aux);
+    if(strcmp(aux,"NULO") == 0) {
+    } else d->telefoneServidor = aux;
+    scan_quote_string(d->cargoServidor);
+    d->tamCargoServidor = strlen(d->cargoServidor) + 2;//tag + \0
+    d->tamanhoRegistro += d->tamCargoServidor + 4;//int tamanho + tag + size of nome
+    scan_quote_string(d->nomeServidor);    
+    d->tamNomeServidor = strlen(d->nomeServidor) + 2;//tag + \0
+    d->tamanhoRegistro += d->tamNomeServidor + 4;//int tamanho + tag + size of nome
+    free(aux);
+    return;
+}
+
+//
+long int findPlace(FILE *fileIn, int regSize) {
+    long int prev, cur, next;
+    int size;
+    char aux;
+    fseek(fileIn, 1, SEEK_SET);                 //vai no topo da lista
+    fread(&cur, sizeof(long), 1, fileIn);       //pega posicao
+    if(cur == -1) {                             //se for -1, retorna o fim do arq
+        fseek(fileIn, 0, SEEK_END);
+        return(ftell(fileIn));
+    }
+    prev = cur;
+    do {                                        //enquanto não acabar a lista
+        fseek(fileIn, cur, SEEK_SET);           //vai pra posicao do atual
+        fread(&aux, sizeof(char), 1, fileIn);   //verifica se foi removido de vdd
+        if(aux != '*') {
+            printf("erro");
+            return (-1)
+        }
+        fread(&size, sizeof(int), 1, fileIn);   //pega o tamanho do registro removido
+        if(size > regSize) break;               //se for o suficiente para o novo, sai do loop
+        prev = cur;
+        fread(&cur, sizeof(long), 1, fileIn);   //continua para proximo registro da lista
+    }while(cur != -1);
+    if(cur == -1) {                             //se saiu do loop com -1, retorna a posicao do final do arq
+        fseek(fileIn, 0, SEEK_END);
+        return(ftell(fileIn));
+    }
+    fread(&next, sizeof(long), 1, fileIn);      //caso contrario, pega a posicao do proximo da lista
+    fseek(fileIn, prev+5, SEEK_SET);            //volta no encadeamento do anterior
+    fwrite(&next, sizeof(long), 1, fileIn);     //escreve posicao do prox
+    return(cur);                                //retorna posicao do atual
+}
+
+
+//
+void addRegister(char *name) {
+    FILE *fileIn = openFile(name, ".bin"); //abre o arquivo
+    long int pos;                          //posicao para escrever o registro
+    int tam;
+    if(fileIn == NULL) {                   //verifica se tudo ocorreu corretamente
+        printf("Falha no processamento do arquivo.");
+        return;
+    }
+    dados *d = makeRegister();             //cria um registro
+    clearRegister(d);
+    writeRegister(d);                      //preenche ele com os dados fornecidos pelo usuario
+    pos = findPlace(fileIn, d->tamanhoRegistro);//encontra uma posicao livre
+    fseek(fileIn, pos+1, SEEK_SET);        //vai para a posicao com o tamanho do registro
+    fread(&tam, sizeof(int), 1, fileIn);   //pega o tamanho do registro removido
+    fseek(fileIn, pos, SEEK_SET);          //volta para o inicio do registro
+    printBinRegister(d, fileIn);           //escreve o registro no arquivo
+    fillAt(tam - (d->tamanhoRegistro), fileIn);//completa com @y
+    return;
+}
+
+
