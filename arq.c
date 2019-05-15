@@ -29,6 +29,18 @@ struct _cabecalho{
     char campos[5][40];     //descricao da tag - 5 * char 40 bytes
 };
 
+//funcao que atualiza o status do arquivo
+void setStatus(FILE *file, int n) {
+    if(file != NULL) {
+        long int aux = ftell(file);
+        char status = n + '0';
+        fseek(file, 0, SEEK_SET);
+        fwrite(&status, sizeof(char), 1, file);
+        fseek(file, aux, SEEK_SET);
+    }
+    return;
+}
+
 //funcao que cria o cabecalho iniciando os valores base
 cabecalho *makeHeader() { 
     cabecalho *header = (cabecalho*) malloc(sizeof(cabecalho));
@@ -71,15 +83,19 @@ void clearRegister(dados *d) {
     d->removido = '-';
     d->tamanhoRegistro = 34; //tamanho dos campos fixos
     d->encadeamentoLista = -1;
+    d->idServidor = -1;
+    d->salarioServidor = -1;
     for(int i = 0; i < 14; i++) {
         d->telefoneServidor[i] = '@';
     }
     d->tamNomeServidor = 0;
     d->tag4 = 'n';
     d->nomeServidor = (char*) malloc(sizeof(char) * 100);
+    d->nomeServidor[0] = '/0';
     d->tamCargoServidor = 0;
     d->tag5 = 'c';
     d->cargoServidor = (char*) malloc(sizeof(char) * 100);
+    d->cargoServidor[0] = '/0';
     return;
 }
 
@@ -120,10 +136,13 @@ void printBinRegister(dados *d, FILE *file) {
 
 //preenche com '@'
 void fillAt(int n, FILE *file){
-    char c = '@';
-    for(int i = 0; i < n; i++){
-        fwrite(&c, sizeof(char), 1, file);
+    if(n > 0) {
+        char c = '@';
+        for(int i = 0; i < n; i++){
+            fwrite(&c, sizeof(char), 1, file);
+        }
     }
+    return;
 }
 
 //funcao que verifica o formato do arquivo pelo nome
@@ -379,7 +398,7 @@ void removeRegister(FILE *fileIn, dados *d) {//funcionando
     long int atual = ftell(fileIn);                    //guarda a posicao
     fwrite(&c, sizeof(char), 1, fileIn);               //marcar como removido
     insertList(atual, d->tamanhoRegistro, fileIn);     //chama funcao de inserir na lista
-    fseek(fileIn, (d->tamanhoRegistro + 4), SEEK_CUR); //vai para o fim do arquivo
+    fseek(fileIn, (d->tamanhoRegistro + 4), SEEK_CUR); //vai para o fim do registro
     return;
 }
 
@@ -535,9 +554,78 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
     return;
 }
 
+//************************************************************************************//
+//will substitute serachbin later on
+
+int cmpReg(dados *a, dados *b) { //compara dois registro
+    if(a != NULL && b != NULL) { //se nenhum for nulo
+        //compara todos os campos se houver algum igual, retorna 1
+        if(a->idServidor == b->idServidor) return 1;
+        else if(a->salarioServidor == b->salarioServidor) return 1;
+        else if(strcmp(a->telefoneServidor, b->telefoneServidor) == 0) return 1;
+        else if(strcmp(a->nomeServidor, b->nomeServidor) == 0) return 1;
+        else if(strcmp(a->cargoServidor, b->cargoServidor) == 0) return 1;
+    }
+    return 0; //caso nao exista um dos registros ou nao exista camṕos iguais, retorna zero
+}
+
+
+dados *seqSearch(FILE *fileIn, dados *search) {
+    dados *d = makeRegister();
+    int aux = 0;
+    while(aux != 1 || fgetc(fileIn) != EOF) {
+        fseek(fileIn, -1, SEEK_CUR);
+        clearRegister(d);
+        readBinRegister(fileIn, d);
+        if(d->removido == '*') {
+            fseek(fileIn, d->tamanhoRegistro, SEEK_CUR);
+        }
+        else aux = cmpReg(d, search);
+    }
+    if(aux == 1) return d;
+    else return NULL;
+}
+
+//funcao que atualiza um registro no arquivo binario
+void updateRegister(char *name, char *campo, char *valor, char *campoNew, char *valorNew) {
+    FILE *fileIn = openFile(name, ".bin");
+    int espaco;
+    long int inicioRegistro;
+    if(fileIn == NULL) {
+        printf("Falha no processamento do arquivo.");
+        return;
+    }
+    setStatus(fileIn, 0); //altera status para zero
+    dados *search = makeRegister(), *d = makeRegister();//cria registros auxiliares, um com os dados desejados e outro com os dados encontrados
+    clearRegister(search);
+    namelessFunction(search, campo, valor);//copia valores desejados para search
+    while(fgetc(fileIn) != EOF) {
+        fseek(fileIn, -1, SEEK_CUR);
+        clearRegister(d);
+        d = seqSearch(fileIn, search);//busca um registro que contenha algum campo igual ao registro search
+        if(d != NULL) {
+            espaco = d->tamanhoRegistro;//guarda o tamanho do registro encontrado
+            inicioRegistro = ftell(fileIn) - (d->tamanhoRegistro + 5);// e a posicao dele
+            namelessFunction(d, campoNew, valorNew);//copia os valores atualizados para o registro
+            if(d->tamanhoRegistro > espaco) {
+                inicioRegistro = findPlace(fileIn, d->tamanhoRegistro);//se o novo registro for maior, procura um lugar para ele
+            }
+            fseek(fileIn, inicioRegistro, SEEK_SET);
+            printBinRegister(d, fileIn);//escreve o registro atualizado
+            fillAt(espaco-(d->tamanhoRegistro), fileIn);//preenche com @ se precisar
+        }
+    }
+    setStatus(fileIn, 1); //funcao finalizada com sucesso, retorna status para 1
+    fclose(fileIn);
+    return;
+}
+
+
+
 //**************************************************************************************//
 
-void writeRegister(dados *d) {
+//funcao que recebe input do usuario para criar novo registro, precisa de um nome melhor ainda
+void writeRegister(dados *d) { 
     char *aux = (char*) malloc(sizeof(char)*100);
     scanf("%s%*c", &aux);
     if(strcmp(aux,"NULO") == 0) {
@@ -561,7 +649,7 @@ void writeRegister(dados *d) {
 }
 
 //
-long int findPlace(FILE *fileIn, int regSize) {
+long findPlace(FILE *fileIn, int regSize) {
     long int prev, cur, next;
     int size;
     char aux;
@@ -583,7 +671,7 @@ long int findPlace(FILE *fileIn, int regSize) {
         if(size > regSize) break;               //se for o suficiente para o novo, sai do loop
         prev = cur;
         fread(&cur, sizeof(long), 1, fileIn);   //continua para proximo registro da lista
-    }while(cur != -1);
+    } while(cur != -1);
     if(cur == -1) {                             //se saiu do loop com -1, retorna a posicao do final do arq
         fseek(fileIn, 0, SEEK_END);
         return(ftell(fileIn));
