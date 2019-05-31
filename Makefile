@@ -1,5 +1,5 @@
 all: 
-	gcc -o test main.c arq.c
+	gcc -g -o test *.c
 
 run:
 	./test
