@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "arq.h"
 #include "escrevernatela.h"
 #include "index.h"
@@ -131,5 +132,85 @@ void makeIndex(char *nameIn, char *indexName) {
     setStatus(fileOut, 1);//muda status do indice para 1
     fclose(fileIn);
     fclose(fileOut);
+    return;
+}
+
+// funcao que pega o arquivo de indice e escreve
+// os registros desse arquivo em um array, retornando este ultimo
+int returnArrayIndex(char* valorIndex, regI* arrayIndex) {
+    FILE* indexName = fopen(valorIndex, "rb");
+    if(indexName == NULL) {
+        printf("Falha no processamento do arquivo.");
+        return 0;
+    }
+
+    int nPagina = 1;    // numero de paginas acessadas, contando a pagina do header
+
+    char c = fgetc(indexName);  // checa o status do arquivo index
+    printf("c = %c\n", c);
+    
+    if(c == '0') {
+        printf("Falha no processamento do arquivo.");
+        return 0;
+    }
+
+    setStatus(indexName, 0);
+    fseek(indexName, 1, SEEK_SET);
+    int numReg;
+    fread(&numReg, sizeof(int), 1, indexName);  // aloca quantos registros tem no arquivo de index
+    arrayIndex = (regI*) malloc(sizeof(regI) * numReg);   // aloca o vetor dos registros do index
+
+    fseek(indexName, 32000, SEEK_SET);
+    for(int i = 0; i < numReg; i++) {
+        fread(&arrayIndex[i].chaveBusca, sizeof(char), 120, indexName); // le o nome, ou seja, a chave de busca
+        fread(&arrayIndex[i].byteOffset, sizeof(int), 1, indexName);    // le o byteoffset daquele registro
+    }
+
+    nPagina += floor((numReg * 128) / 32000);   // calcula o numero de paginas
+    fclose(indexName);
+    return nPagina;
+}
+
+// funcao que busca no array do index
+// o campo nomeServidor e o valor deste, depois
+// define um array com os bytes offset dos valores encontrados
+// e retorna o numero de paginas acessadas
+int buscaNomeIndex(regI* arrayIndex, char* valorNome, int numReg, long int* byteOffset) {
+    int nPagina = 1; 
+    int countPagina;
+
+    for(int i = 0; i < numReg; i++) {
+        if(strcmp(arrayIndex[i].chaveBusca, valorNome) == 0) {  // se encontrar o nome...
+            byteOffset[i] = arrayIndex[i].byteOffset;   // atribui o byteoffset encontrado
+            if(countPagina >= 32000) {  //
+                nPagina++;              //  se o valorNome estiver em outra pagina
+                countPagina = 0;        //  de disco, adiciona ao numero de paginas acessadas
+            }
+            countPagina += 128;     // soma o tamanho dos registros do index
+
+        } else {
+            if(countPagina >= 32000) {  //
+                nPagina++;              //  adiciona ao numero de paginas acessadas  
+                countPagina = 0;        //
+            }
+            countPagina += 128;     // soma o tamanho dos registros do index
+        }
+    }
+
+    return nPagina;
+}
+
+void printRegisterIndex(FILE* binarioEntrada, long int* byteOffset, int numReg) {
+    dados *reg = makeRegister();
+    cabecalho *cab = makeHeader();
+    readBinHeader(binarioEntrada, cab);
+
+    for(int i = 0; i < numReg; i++) {
+        fseek(binarioEntrada, byteOffset[i], SEEK_SET);  // pula para o byteoffset do registro para impressao
+        clearRegister(reg);
+        readBinRegister(binarioEntrada, reg);
+        printSearchRegister(cab, reg);
+    }
+    setStatus(binarioEntrada, 1);
     return;
 }

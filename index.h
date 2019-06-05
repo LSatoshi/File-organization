@@ -21,5 +21,8 @@ typedef struct _headerI headerI;
 typedef struct _regI regI;
 
 void makeIndex(char *nameIn, char *indexName);
+int returnArrayIndex(char* indexName, regI* arrayIndex);
+int buscaNomeIndex(regI* arrayIndex, char* valorNome, int numReg, long int* byteOffset);
+void printRegisterIndex(FILE* binarioEntrada, long int* byteOffset, int numReg);
 
 #endif

@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "arq.h"
@@ -9,6 +10,7 @@ int main() {
     char name[40];
     char campo[40];
     char valor[40];
+    char valorIndex[40];
     char campoNew[40];
     char valorNew[40];
     scanf("%d", &menu);
@@ -87,6 +89,33 @@ int main() {
             scanf("%s", valor);
             makeIndex(name, valor);
             binarioNaTela2(valor);
+            break;
+
+        case 11:
+            scanf("%s", valorIndex); // le o arquivo index
+            scanf("%s", campoNew);  // le o campo nomeServidor
+            scanf("%[^\n]", valorNew);  // le o valor do campo de entrada (nomeServidor)
+
+            regI* arrayIndex;
+            int nPaginaCarregar = returnArrayIndex(valorIndex, arrayIndex);   // aloca os dados do index num array
+            FILE* binarioEntrada = fopen(name, "rb");
+            FILE* fileIndex = fopen(valorIndex, "rb");
+            if(binarioEntrada == NULL || fileIndex == NULL) {
+                printf("Falha no processamento do arquivo.");
+                return 0;
+            }
+            fgetc(fileIndex);                    //pula status
+            fread(&n, sizeof(int), 1, fileIndex);//  obtem o tamanho do array de registros do index
+
+            long int* byteOffset = (long int*) malloc(sizeof(long int) * n);
+            int nPaginaAcessar = buscaNomeIndex(arrayIndex, valorNew, n, byteOffset);
+
+            printRegisterIndex(binarioEntrada, byteOffset, n);
+            fclose(binarioEntrada);
+
+            printf("\n");
+            printf("Número de páginas de disco para carregar o arquivo de índice: %d\n", nPaginaCarregar);
+            printf("Número de páginas de disco para acessar o arquivo de dados: %d", nPaginaAcessar);
             break;
 
         default:
