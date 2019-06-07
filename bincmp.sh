@@ -1,5 +1,5 @@
 rm binmeu.txt
 rm bincerto.txt
-hexdump -Cv binario-1.index > bincerto.txt
-hexdump -Cv binmeu.bin > binmeu.txt
+hexdump -Cv binario-7-depois.index > bincerto.txt
+hexdump -Cv binario-7.index > binmeu.txt
 meld bincerto.txt binmeu.txt
