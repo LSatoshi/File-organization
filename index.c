@@ -281,7 +281,7 @@ void removeRegisterI(char *fileName, char *indexName, char *name) {
     removeFromIndex(indexArr, offset);     //remove o dados desses registros do array que vai pro indice
     headerI *head = makeHeaderI();
     setHeaderI(head, 0, numReg-j);
-    setStatus(index, 0);                //muda status do arquivo para zero enqunato altera ele
+    setStatus(index, 0);                //muda status do arquivo para zero enquanto altera ele
     writeBinHeaderI(index, head);       //escreve o novo indice sem os removidos
     fseek(index, PageSize, SEEK_SET);
     for(int i = 0; i <= numReg-j; i++) {
@@ -289,6 +289,48 @@ void removeRegisterI(char *fileName, char *indexName, char *name) {
     }
     setStatus(fileIn, 1);
     setStatus(index, 1);
+    fclose(fileIn);
+    fclose(index);
+    return;
+}
+
+//funcao estendida da funcionalidade 5,
+//tambem conhecida como funcionalidade 13
+void addRegisterIndex(char *name, char* indexName) {
+    FILE *fileIn = openFile(name, ".bin"); //abre o arquivo
+    FILE *index = fopen(indexName, "rb+");
+    if(fileIn == NULL || index == NULL) {
+        printf("Falha no processamento do arquivo.");
+        return;
+    }
+    if(fgetc(fileIn) == '0' || fgetc(index) == '0') {//verifica consistencia
+        printf("Falha no processamento do arquivo.");
+        return;
+    }
+    int numReg = returnNumReg(indexName);   // obtem o numero de registradores
+    regI *indexArr = (regI *) malloc(sizeof(regI) * numReg);
+    setStatus(fileIn, 0);
+    long int pos;                          //posicao para escrever o registro
+    int tam;
+    dados *d = makeRegister();             //cria um registro
+    clearRegister(d);
+    writeRegister(d);                      //preenche ele com os dados fornecidos pelo usuario
+    pos = findPlace(fileIn, d);            //encontra uma posicao livre
+    fseek(fileIn, pos, SEEK_SET);          //vai para a posicao 
+    printBinRegister(d, fileIn);           //escreve o registro no arquivo
+    indexArr = (regI *) realloc(indexArr, numReg++);    // adiciona mais um registro
+    returnArrayIndex(indexName, indexArr, numReg);  //pega os registros do indice e coloca no array em ram
+    headerI *head = makeHeaderI();
+    setHeaderI(head, 0, numReg);
+    setStatus(index, 0);                //muda status do arquivo para zero enquanto altera ele
+    writeBinHeaderI(index, head);       //escreve o novo indice com os adicionados
+    fseek(index, PageSize, SEEK_SET);
+    for(int i = 0; i <= numReg; i++) {
+        writeBinRegI(index, &indexArr[i]);
+    }
+    setStatus(fileIn, 1);
+    setStatus(index, 1);
+    freeRegister(d);
     fclose(fileIn);
     fclose(index);
     return;

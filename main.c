@@ -142,6 +142,15 @@ int main() {
             binarioNaTela2(valorIndex);
             break;
 
+        case 13:
+            scanf("%s", valorIndex);    // le o arquivo de indice
+            scanf("%d", &n); // le o numero de insercoes
+            for(int i = 0; i < n; i++) {
+                addRegisterIndex(name, valorIndex);
+            }
+            binarioNaTela2(valorIndex);
+            break;
+
         default:
             break;
     }
