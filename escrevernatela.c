@@ -39,7 +39,7 @@ void binarioNaTela2(char *nomeArquivoBinario) {
 		return;
 	}*/
 	//fs = openFile(nomeArquivoBinario, ".bin");
-	fs = fopen(nomeArquivoBinario, "rb+");
+	fs = fopen(nomeArquivoBinario, "rb");
 	if(fs == NULL || fgetc(fs) == '0') return;
 	fseek(fs, 0, SEEK_END);
 	fl = ftell(fs);

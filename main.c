@@ -15,7 +15,7 @@ int main() {
     char valorNew[40];
     scanf("%d", &menu);
     scanf("%s", name);
-    switch(menu) {
+    switch (menu) {
         case 1:
             makeBin(name);
             break;
@@ -34,7 +34,7 @@ int main() {
 
         case 4:
             scanf("%d", &n);
-            for(int i = 0; i < n; i++) {
+            for (int i = 0; i < n; i++) {
                 scanf("%s", campo);
                 scan_quote_string(valor);
                 trim(valor);
@@ -45,7 +45,7 @@ int main() {
 
         case 5:
             scanf("%d", &n);
-            for(int i = 0; i < n; i++) {
+            for (int i = 0; i < n; i++) {
                 addRegister(name);
             }
             binarioNaTela2(name);
@@ -53,7 +53,7 @@ int main() {
 
         case 6:
             scanf("%d", &n);
-            for(int i = 0; i < n; i++) {
+            for (int i = 0; i < n; i++) {
                 scanf("%s", campo);
                 scan_quote_string(valor);
                 trim(valor);
@@ -92,35 +92,58 @@ int main() {
             break;
 
         case 11:
-            scanf("%s", valorIndex); // le o arquivo index
-            scanf("%s", campoNew);  // le o campo nomeServidor
-            scanf("%[^\n]", valorNew);  // le o valor do campo de entrada (nomeServidor)
+            scanf("%s", valorIndex);  // le o arquivo index
+            scanf("%s", campoNew);    // le o campo nomeServidor
+            scanf(" %[^\n]s", valorNew);  // le o valor do campo de entrada (nomeServidor)
 
-            regI* arrayIndex;
-            int nPaginaCarregar = returnArrayIndex(valorIndex, arrayIndex);   // aloca os dados do index num array
+            n = returnNumReg(valorIndex);  // obtem o numReg
+
+            regI* arrayIndex = alocaArrayRegI2d(arrayIndex, n);  // aloca o arrayIndex
+
+            int nPaginaCarregar = returnArrayIndex(valorIndex, arrayIndex, n);  // aloca os dados do index num array
+            printf("nPaginaCarregar = %d\n", nPaginaCarregar);
+
             FILE* binarioEntrada = fopen(name, "rb");
             FILE* fileIndex = fopen(valorIndex, "rb");
-            if(binarioEntrada == NULL || fileIndex == NULL) {
+            if (binarioEntrada == NULL || fileIndex == NULL) {
                 printf("Falha no processamento do arquivo.");
                 return 0;
             }
-            fgetc(fileIndex);                    //pula status
-            fread(&n, sizeof(int), 1, fileIndex);//  obtem o tamanho do array de registros do index
 
-            long int* byteOffset = (long int*) malloc(sizeof(long int) * n);
+            fgetc(fileIndex);
+            fread(&n, sizeof(int), 1, fileIndex);  //  obtem o tamanho do array de registros do index
+
+            long int* byteOffset = alocaArrayInt2d(byteOffset, n);
             int nPaginaAcessar = buscaNomeIndex(arrayIndex, valorNew, n, byteOffset);
 
             printRegisterIndex(binarioEntrada, byteOffset, n);
             fclose(binarioEntrada);
 
             printf("\n");
-            printf("Número de páginas de disco para carregar o arquivo de índice: %d\n", nPaginaCarregar);
-            printf("Número de páginas de disco para acessar o arquivo de dados: %d", nPaginaAcessar);
+            printf(
+                "Número de páginas de disco para carregar o arquivo de índice: "
+                "%d\n",
+                nPaginaCarregar);
+            printf(
+                "Número de páginas de disco para acessar o arquivo de dados: "
+                "%d\n",
+                nPaginaAcessar);
+            break;
+
+        case 12:
+            scanf("%s", valorIndex); //nome do arquivo de indice
+            scanf("%d", &n);          //numero de remocoes
+            for(int i = 0; i < n; i++) {
+                scanf("%s", campo);      //campo de busca, sempre nomeSevidor para indice
+                scan_quote_string(valor);//nome do servidor
+                trim(valor);
+                removeRegisterI(name, valorIndex, valor);
+            }
+            binarioNaTela2(valorIndex);
             break;
 
         default:
             break;
-
     }
     return 0;
 }

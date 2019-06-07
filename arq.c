@@ -402,7 +402,7 @@ void printSearchRegister(cabecalho *c, dados *d) {
     if(d->salarioServidor != -1) printf("%.2lf\n", d->salarioServidor);
     else printf("valor nao declarado\n");
     printf("%s: ", c->campos[2]);
-    if(d->telefoneServidor[0] != '@') printf("%s\n", d->telefoneServidor);
+    if(d->telefoneServidor[0] != '@') printf("%.14s\n", d->telefoneServidor);
     else printf("valor nao declarado\n");
     printf("%s: ", c->campos[3]);
     if(d->tamNomeServidor > 1) printf("%s\n", d->nomeServidor);
