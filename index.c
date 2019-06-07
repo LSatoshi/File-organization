@@ -282,10 +282,11 @@ void removeRegisterI(char *fileName, char *indexName, char *name) {
     headerI *head = makeHeaderI();
     setHeaderI(head, 0, numReg-j);
     setStatus(index, 0);                //muda status do arquivo para zero enquanto altera ele
+    index = fopen(indexName, "wb");     //reabre o arquivo de indice para escrita
     writeBinHeaderI(index, head);       //escreve o novo indice sem os removidos
     fseek(index, PageSize, SEEK_SET);
-    for(int i = 0; i <= numReg-j; i++) {
-        writeBinRegI(index, &indexArr[i]);
+    for(int i = 0; i < numReg; i++) {
+        writeBinRegI(index, &indexArr[i]);//imprime todos registros no indice
     }
     setStatus(fileIn, 1);
     setStatus(index, 1);
