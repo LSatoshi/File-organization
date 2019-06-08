@@ -333,15 +333,18 @@ void addRegisterIndex(char *name, char* indexName) {
     printBinRegister(d, fileIn);           //escreve o registro no arquivo
     regI *indexArr = (regI *) malloc(sizeof(regI) * numReg);
     returnArrayIndex(indexName, indexArr, numReg);  //pega os registros do indice e coloca no array em ram
-    numReg++;   // adiciona um registro
-    addToIndex(indexArr, numReg, pos, d);  // adiciona o novo registro ao indice na ram
-    headerI *head = makeHeaderI();
-    setHeaderI(head, 0, numReg);
-    setStatus(index, 0);                //muda status do arquivo para zero enquanto altera ele
-    writeBinHeaderI(index, head);       //escreve o novo indice com os adicionados
-    fseek(index, PageSize, SEEK_SET);
-    for(int i = 0; i < numReg; i++) {
-        writeBinRegI(index, &indexArr[i]);
+    if(!strcmp(d->nomeServidor, "NULO")) {
+        printf("deu nulo\n");
+        numReg++;   // adiciona um registro
+        addToIndex(indexArr, numReg, pos, d);  // adiciona o novo registro ao indice na ram
+        headerI *head = makeHeaderI();
+        setHeaderI(head, 0, numReg);
+        setStatus(index, 0);                //muda status do arquivo para zero enquanto altera ele
+        writeBinHeaderI(index, head);       //escreve o novo indice com os adicionados
+        fseek(index, PageSize, SEEK_SET);
+        for(int i = 0; i < numReg; i++) {
+            writeBinRegI(index, &indexArr[i]);
+        }
     }
     setStatus(fileIn, 1);
     setStatus(index, 1);
