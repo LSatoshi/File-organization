@@ -200,7 +200,7 @@ int returnArrayIndex(char *valorIndex, regI *arrayIndex, int numReg) {
         fread(&arrayIndex[i].chaveBusca, sizeof(char), 120, indexName);  // le o nome, ou seja, a chave de busca
         fread(&arrayIndex[i].byteOffset, sizeof(long int), 1, indexName);  // le o byteoffset daquele registro
     }
-    nPagina += (numReg * 128) / PageSize;  // calcula o numero de paginas
+    nPagina += ceil((double)(numReg*128) / PageSize);  // calcula o numero de paginas
     fclose(indexName);
     return nPagina;
 }
@@ -220,18 +220,17 @@ long int *alocaArrayInt2d(long int *byteOffset, int n) {
 // e retorna o numero de paginas acessadas
 int buscaNomeIndex(regI *arrayIndex, char *valorNome, int numReg, long int *byteOffset) {
     int nPagina = 1;
-    int countPagina;
+    long int countPagina = 0;
     int count = 0;  // para atribuir na ordem correta
     for (int i = 0; i < numReg; i++) {
-        if (countPagina >= PageSize) {
-            nPagina++;        //  se o valorNome estiver em outra pagina
-            countPagina = 0;  //  de disco, adiciona ao numero de paginas acessadas
-        }
         if (strcmp(arrayIndex[i].chaveBusca, valorNome) == 0) {  // se encontrar o nome...
+            if((byteOffset[count] - countPagina) > 32000 || (byteOffset[count] - countPagina) < -32000) {
+                nPagina++;  // conta mais uma pagina de acesso de disco
+            }
             byteOffset[count] = arrayIndex[i].byteOffset;  // atribui o byteoffset encontrado
+            countPagina = arrayIndex[i].byteOffset; // guarda esse byteoffset para contar as paginas
             count++;  // aumenta o contador, para atribuir no proximo byteoffset
         }
-        countPagina += 128;  // soma o tamanho dos registros do index
     }
     byteOffset[count] = -1;
     return nPagina;
