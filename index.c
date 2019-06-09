@@ -340,7 +340,7 @@ void addRegisterIndex(char *name, char* indexName) {
     printBinRegister(d, fileIn);           //escreve o registro no arquivo
     regI *indexArr = (regI *) malloc(sizeof(regI) * numReg);
     returnArrayIndex(indexName, indexArr, numReg);  //pega os registros do indice e coloca no array em ram
-    if(strcmp(d->nomeServidor, " ")) {
+    if(strcmp(d->nomeServidor, "\0")) {
         numReg++;   // adiciona um registro
         addToIndex(indexArr, numReg, pos, d);  // adiciona o novo registro ao indice na ram
         headerI *head = makeHeaderI();
@@ -377,7 +377,7 @@ int searchBinwithIndex(char *fileName, char *indexName, char *campo, char *name)
     int nPaginaAcessar = buscaNomeIndex(arrayIndex, name, n, byteOffset); //busca nome no indice e retorna o nro de paginas acessadas
     if(nPaginaAcessar == 1) {   //se nao encontrar nenhum registro, acaba
         printf("Registro inexistente.");
-        return 1;
+        return nPaginaCarregar * (-1); //valor negativo serve para mostrar que o registro não foi encontrado, mas devolve o nro de paginas
     }
     printRegisterIndex(binarioEntrada, byteOffset, n);
     fclose(binarioEntrada);

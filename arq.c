@@ -535,14 +535,17 @@ int searchBin(char *name, char *campo, char *valor, int menu) {
             }
         }
     }
+    aux = (ftell(fileIn)/PageSize) + 1;
     if(menu == 3) {
-        if(numReg == 0) printf("Registro inexistente.");
+        if(numReg == 0) {
+            printf("Registro inexistente.");
+            aux *= -1;   //valor negativo serve para mostrar que o registro não foi encontrado, mas devolve o nro de paginas
+        }
         else printf("Número de páginas de disco acessadas: %ld", (ftell(fileIn)/PageSize) + 1);
     }
     free(c);
     setStatus(fileIn, 1);
     fclose(fileIn);
-    aux = (ftell(fileIn)/PageSize) + 1;
     return aux;
 }
 

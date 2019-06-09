@@ -5,6 +5,13 @@
 #include "escrevernatela.h"
 #include "index.h"
 
+/*
+*Codigo escrito com base no programa de Leandro Satoshi
+* Dupla:
+* Pedro Henrique Nieuwenhoff 10377729
+* Leandro Satoshi de Siqueira 10893103
+*/
+
 int main() {
     int menu, n;
     char name[40];
@@ -128,8 +135,18 @@ int main() {
             trim(valor);
             printf("*** Realizando a busca sem o auxílio de índice\n");
             pagA = searchBin(name, campo, valor, 3);
+            if(pagA < 0) {
+                pagA *= -1;
+                printf("\nNúmero de páginas de disco acessadas: %d", pagA);
+            }
             printf("\n*** Realizando a busca com o auxílio de um índice secundário fortemente ligado\n");
             pagB = searchBinwithIndex(name, valorIndex, campo, valor);
+            if(pagB < 0) {
+                pagB *= -1;
+                printf("\nNúmero de páginas de disco para carregar o arquivo de índice: %d\n",pagB);
+                printf("Número de páginas de disco para acessar o arquivo de dados: 1\n");
+                pagB = 1;
+            }
             printf("\nA diferença no número de páginas de disco acessadas: %d", (pagA-pagB));
             break;
 
