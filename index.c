@@ -200,7 +200,8 @@ int returnArrayIndex(char *valorIndex, regI *arrayIndex, int numReg) {
         fread(&arrayIndex[i].chaveBusca, sizeof(char), 120, indexName);  // le o nome, ou seja, a chave de busca
         fread(&arrayIndex[i].byteOffset, sizeof(long int), 1, indexName);  // le o byteoffset daquele registro
     }
-    nPagina += ceil((double)(numReg*128) / PageSize);  // calcula o numero de paginas
+    nPagina += (numReg*128) / PageSize;  // calcula o numero de paginas inteiras acessadas
+    if((numReg*128) % PageSize > 0) nPagina++; //se houver resto, ja entrou em outra, entao adiciona mais um
     fclose(indexName);
     return nPagina;
 }
@@ -219,17 +220,24 @@ long int *alocaArrayInt2d(long int *byteOffset, int n) {
 // define um array com os bytes offset dos valores encontrados
 // e retorna o numero de paginas acessadas
 int buscaNomeIndex(regI *arrayIndex, char *valorNome, int numReg, long int *byteOffset) {
-    int nPagina = 1;
+    int nPagina = 0;
     long int countPagina = 0;
+    long int curPag, prevPag = -1;
     int count = 0;  // para atribuir na ordem correta
     for (int i = 0; i < numReg; i++) {
         if (strcmp(arrayIndex[i].chaveBusca, valorNome) == 0) {  // se encontrar o nome...
-            if((byteOffset[count] - countPagina) > 32000 || (byteOffset[count] - countPagina) < -32000) {
+            /*if((byteOffset[count] - countPagina) > 32000 || (byteOffset[count] - countPagina) < -32000) {
                 nPagina++;  // conta mais uma pagina de acesso de disco
             }
             byteOffset[count] = arrayIndex[i].byteOffset;  // atribui o byteoffset encontrado
             countPagina = arrayIndex[i].byteOffset; // guarda esse byteoffset para contar as paginas
-            count++;  // aumenta o contador, para atribuir no proximo byteoffset
+            count++;  // aumenta o contador, para atribuir no proximo byteoffset*/
+
+            curPag = arrayIndex[i].byteOffset % PageSize; //guarda a pagina onde esta o registro atual
+            if(curPag != prevPag) nPagina++;              //se a pagina do registro atual for diferente, aumenta contador
+            byteOffset[count] = arrayIndex[i].byteOffset; //guarda offset num array
+            prevPag = curPag;
+            count++;
         }
     }
     byteOffset[count] = -1;
@@ -246,7 +254,7 @@ void printRegisterIndex(FILE *binarioEntrada, long int *byteOffset, int numReg) 
     // no indice e atribui ao size
     while (1) {
         count++;
-        if (byteOffset[count] == 0) {
+        if (byteOffset[count] == -1) {
             size = count;
             break;
         }

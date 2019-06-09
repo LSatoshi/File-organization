@@ -101,25 +101,26 @@ int main() {
             regI* arrayIndex = alocaArrayRegI2d(arrayIndex, n);  // aloca o arrayIndex
 
             int nPaginaCarregar = returnArrayIndex(valorIndex, arrayIndex, n);  // aloca os dados do index num array
-            printf("nPaginaCarregar = %d\n", nPaginaCarregar);
+            if (nPaginaCarregar == 0) return 0;
 
             FILE* binarioEntrada = fopen(name, "rb");
             FILE* fileIndex = fopen(valorIndex, "rb");
-            if (binarioEntrada == NULL || fileIndex == NULL) {
+            if (binarioEntrada == NULL || fileIndex == NULL || fgetc(fileIndex) == '0' || fgetc(binarioEntrada) == '0') {
                 printf("Falha no processamento do arquivo.");
                 return 0;
             }
-
-            fgetc(fileIndex);
             fread(&n, sizeof(int), 1, fileIndex);  //  obtem o tamanho do array de registros do index
 
             long int* byteOffset = alocaArrayInt2d(byteOffset, n);
             int nPaginaAcessar = buscaNomeIndex(arrayIndex, valorNew, n, byteOffset);
+            if(nPaginaAcessar == 0) {   //se nao encontrar nenhum registro, acaba
+                printf("Registro inexistente.");
+                return 0;
+            }
 
             printRegisterIndex(binarioEntrada, byteOffset, n);
             fclose(binarioEntrada);
 
-            printf("\n");
             printf(
                 "Número de páginas de disco para carregar o arquivo de índice: "
                 "%d\n",
