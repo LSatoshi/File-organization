@@ -428,20 +428,20 @@ char tagCampo(char *c) {
 
 //funcao principal da funcionalidade 3, busca um registro em um arquivo binario valido
 //tambem utilizado para remocao na funcionalidade 4
-void searchBin(char *name, char *campo, char *valor, int menu) {
+int searchBin(char *name, char *campo, char *valor, int menu) {
     FILE *fileIn = fopen(name, "rb+");
-    int id, numReg = 0, numCampo = -1;
+    int id, numReg = 0, numCampo = -1, aux;
     double salario;
     char tag = tagCampo(campo);
     if(fileIn == NULL) {
         printf("Falha no processamento do arquivo.");
-        return;
+        return -1;
     }
     cabecalho *c = makeHeader();
     readBinHeader(fileIn, c);
     if(c == NULL||c->status == '0') {
         printf("Falha no processamento do arquivo.");
-        return;
+        return -1;
     }
     for(int i = 0; i < 5; i++) {
         if(tag == c->tags[i]) {
@@ -452,7 +452,7 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
     }
     if(numCampo == -1) {
         printf("Falha no processamento do arquivo.");
-        return;
+        return -1;
     }
     setStatus(fileIn, 0);
     dados *d = makeRegister();
@@ -471,6 +471,7 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
                 if(d->idServidor == id) {
                     if(menu == 3) {
                         printSearchRegister(c,d);
+                        aux = (ftell(fileIn)/PageSize) + 1;
                         printf("Número de páginas de disco acessadas: %ld", (ftell(fileIn)/PageSize) + 1);
                         numReg++;
                     }
@@ -479,7 +480,7 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
                     }
                     setStatus(fileIn, 1);
                     fclose(fileIn);
-                    return;
+                    return (ftell(fileIn)/PageSize) + 1;
                 }
                 break;
             
@@ -541,7 +542,8 @@ void searchBin(char *name, char *campo, char *valor, int menu) {
     free(c);
     setStatus(fileIn, 1);
     fclose(fileIn);
-    return;
+    aux = (ftell(fileIn)/PageSize) + 1;
+    return aux;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

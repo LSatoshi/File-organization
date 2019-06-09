@@ -164,12 +164,12 @@ void makeIndex(char *nameIn, char *indexName) {
 
 // funcao que retorna o numero de registros
 // do arquivo de indice
-int returnNumReg(char *valorIndex) {
-    FILE *indexName = fopen(valorIndex, "rb");
-    fseek(indexName, 1, SEEK_SET);
+int returnNumReg(char *indexName) {
+    FILE *index = fopen(indexName, "rb");
+    fseek(index, 1, SEEK_SET);
     int numReg;
-    fread(&numReg, sizeof(int), 1, indexName);
-    fclose(indexName);
+    fread(&numReg, sizeof(int), 1, index);
+    fclose(index);
     return numReg;
 }
 
@@ -184,25 +184,25 @@ regI *alocaArrayRegI2d(regI *arrayIndex, int n) {
 
 // funcao que pega o arquivo de indice e escreve
 // os registros desse arquivo em um array, retornando este ultimo
-int returnArrayIndex(char *valorIndex, regI *arrayIndex, int numReg) {
-    FILE *indexName = fopen(valorIndex, "rb");
-    if (indexName == NULL) {
+int returnArrayIndex(char *indexName, regI *arrayIndex, int numReg) {
+    FILE *index = fopen(indexName, "rb");
+    if (index == NULL) {
         printf("Falha no processamento do arquivo.");
         return 0;
     }
     int nPagina = 1;  // numero de paginas acessadas, contando a pagina do header
-    if (fgetc(indexName) == '0') { // checa o status do arquivo index
+    if (fgetc(index) == '0') { // checa o status do arquivo index
         printf("Falha no processamento do arquivo.");
         return 0;
     }
-    fseek(indexName, PageSize, SEEK_SET);
+    fseek(index, PageSize, SEEK_SET);
     for (int i = 0; i < numReg; i++) {
-        fread(&arrayIndex[i].chaveBusca, sizeof(char), 120, indexName);  // le o nome, ou seja, a chave de busca
-        fread(&arrayIndex[i].byteOffset, sizeof(long int), 1, indexName);  // le o byteoffset daquele registro
+        fread(&arrayIndex[i].chaveBusca, sizeof(char), 120, index);  // le o nome, ou seja, a chave de busca
+        fread(&arrayIndex[i].byteOffset, sizeof(long int), 1, index);  // le o byteoffset daquele registro
     }
     nPagina += (numReg*128) / PageSize;  // calcula o numero de paginas inteiras acessadas
     if((numReg*128) % PageSize > 0) nPagina++; //se houver resto, ja entrou em outra, entao adiciona mais um
-    fclose(indexName);
+    fclose(index);
     return nPagina;
 }
 
@@ -220,7 +220,7 @@ long int *alocaArrayInt2d(long int *byteOffset, int n) {
 // define um array com os bytes offset dos valores encontrados
 // e retorna o numero de paginas acessadas
 int buscaNomeIndex(regI *arrayIndex, char *valorNome, int numReg, long int *byteOffset) {
-    int nPagina = 0;
+    int nPagina = 1;
     long int countPagina = 0;
     long int curPag, prevPag = -1;
     int count = 0;  // para atribuir na ordem correta
@@ -233,7 +233,7 @@ int buscaNomeIndex(regI *arrayIndex, char *valorNome, int numReg, long int *byte
             countPagina = arrayIndex[i].byteOffset; // guarda esse byteoffset para contar as paginas
             count++;  // aumenta o contador, para atribuir no proximo byteoffset*/
 
-            curPag = arrayIndex[i].byteOffset % PageSize; //guarda a pagina onde esta o registro atual
+            curPag = arrayIndex[i].byteOffset / PageSize; //guarda a pagina onde esta o registro atual
             if(curPag != prevPag) nPagina++;              //se a pagina do registro atual for diferente, aumenta contador
             byteOffset[count] = arrayIndex[i].byteOffset; //guarda offset num array
             prevPag = curPag;
@@ -340,8 +340,7 @@ void addRegisterIndex(char *name, char* indexName) {
     printBinRegister(d, fileIn);           //escreve o registro no arquivo
     regI *indexArr = (regI *) malloc(sizeof(regI) * numReg);
     returnArrayIndex(indexName, indexArr, numReg);  //pega os registros do indice e coloca no array em ram
-    if(!strcmp(d->nomeServidor, "NULO")) {
-        printf("deu nulo\n");
+    if(strcmp(d->nomeServidor, " ")) {
         numReg++;   // adiciona um registro
         addToIndex(indexArr, numReg, pos, d);  // adiciona o novo registro ao indice na ram
         headerI *head = makeHeaderI();
@@ -359,4 +358,37 @@ void addRegisterIndex(char *name, char* indexName) {
     fclose(fileIn);
     fclose(index);
     return;
+}
+
+
+//funcao de busca que utiliza o arquivo de indice
+int searchBinwithIndex(char *fileName, char *indexName, char *campo, char *name) {
+    FILE* binarioEntrada = fopen(fileName, "rb");
+    FILE* fileIndex = fopen(indexName, "rb");
+    if (binarioEntrada == NULL || fileIndex == NULL || fgetc(fileIndex) == '0' || fgetc(binarioEntrada) == '0') {
+        printf("Falha no processamento do arquivo.");
+        return 0;
+    }
+    int n = returnNumReg(indexName);  // obtem o numReg
+    regI* arrayIndex = alocaArrayRegI2d(arrayIndex, n);  // aloca o arrayIndex
+    int nPaginaCarregar = returnArrayIndex(indexName, arrayIndex, n);  // aloca os dados do index num array e retorna nro de paginas acessadas
+    fread(&n, sizeof(int), 1, fileIndex);  //  obtem o tamanho do array de registros do index
+    long int* byteOffset = alocaArrayInt2d(byteOffset, n);
+    int nPaginaAcessar = buscaNomeIndex(arrayIndex, name, n, byteOffset); //busca nome no indice e retorna o nro de paginas acessadas
+    if(nPaginaAcessar == 1) {   //se nao encontrar nenhum registro, acaba
+        printf("Registro inexistente.");
+        return 1;
+    }
+    printRegisterIndex(binarioEntrada, byteOffset, n);
+    fclose(binarioEntrada);
+
+    printf(
+        "Número de páginas de disco para carregar o arquivo de índice: "
+        "%d\n",
+        nPaginaCarregar);
+    printf(
+        "Número de páginas de disco para acessar o arquivo de dados: "
+        "%d\n",
+        nPaginaAcessar);
+    return (nPaginaAcessar);
 }

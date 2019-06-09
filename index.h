@@ -30,5 +30,6 @@ regI* alocaArrayRegI2d(regI* arrayIndex, int n);
 long int* alocaArrayInt2d(long int* byteOffset, int n);
 void removeRegisterI(char *fileName, char *indexName, char *name);
 void addRegisterIndex(char *name, char* indexName);
+int searchBinwithIndex(char *fileName, char *indexName, char *campo, char *name);
 
 #endif

@@ -13,6 +13,7 @@ int main() {
     char valorIndex[40];
     char campoNew[40];
     char valorNew[40];
+    int pagA,pagB;
     scanf("%d", &menu);
     scanf("%s", name);
     switch (menu) {
@@ -95,40 +96,7 @@ int main() {
             scanf("%s", valorIndex);  // le o arquivo index
             scanf("%s", campoNew);    // le o campo nomeServidor
             scanf(" %[^\n]s", valorNew);  // le o valor do campo de entrada (nomeServidor)
-
-            n = returnNumReg(valorIndex);  // obtem o numReg
-
-            regI* arrayIndex = alocaArrayRegI2d(arrayIndex, n);  // aloca o arrayIndex
-
-            int nPaginaCarregar = returnArrayIndex(valorIndex, arrayIndex, n);  // aloca os dados do index num array
-            if (nPaginaCarregar == 0) return 0;
-
-            FILE* binarioEntrada = fopen(name, "rb");
-            FILE* fileIndex = fopen(valorIndex, "rb");
-            if (binarioEntrada == NULL || fileIndex == NULL || fgetc(fileIndex) == '0' || fgetc(binarioEntrada) == '0') {
-                printf("Falha no processamento do arquivo.");
-                return 0;
-            }
-            fread(&n, sizeof(int), 1, fileIndex);  //  obtem o tamanho do array de registros do index
-
-            long int* byteOffset = alocaArrayInt2d(byteOffset, n);
-            int nPaginaAcessar = buscaNomeIndex(arrayIndex, valorNew, n, byteOffset);
-            if(nPaginaAcessar == 0) {   //se nao encontrar nenhum registro, acaba
-                printf("Registro inexistente.");
-                return 0;
-            }
-
-            printRegisterIndex(binarioEntrada, byteOffset, n);
-            fclose(binarioEntrada);
-
-            printf(
-                "Número de páginas de disco para carregar o arquivo de índice: "
-                "%d\n",
-                nPaginaCarregar);
-            printf(
-                "Número de páginas de disco para acessar o arquivo de dados: "
-                "%d\n",
-                nPaginaAcessar);
+            searchBinwithIndex(name, valorIndex, campoNew, valorNew);
             break;
 
         case 12:
@@ -150,6 +118,19 @@ int main() {
                 addRegisterIndex(name, valorIndex);
             }
             binarioNaTela2(valorIndex);
+            break;
+
+        case 14:
+            scanf("%s", valorIndex); //arquivo de indice
+            scanf("%s", campo);      //campo a ser buscado
+            scanf(" %[^\n]s", valor);//valor do campo
+            trim(campo);
+            trim(valor);
+            printf("*** Realizando a busca sem o auxílio de índice\n");
+            pagA = searchBin(name, campo, valor, 3);
+            printf("\n*** Realizando a busca com o auxílio de um índice secundário fortemente ligado\n");
+            pagB = searchBinwithIndex(name, valorIndex, campo, valor);
+            printf("\nA diferença no número de páginas de disco acessadas: %d", (pagA-pagB));
             break;
 
         default:
